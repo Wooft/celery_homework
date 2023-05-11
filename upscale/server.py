@@ -46,7 +46,8 @@ class UpscalerView(MethodView):
         image = request.files['file']
         image.save(os.path.join(self.input, image.filename))
         #Закидываем файл в upscaler, результат сохраняется в results
-        task = upscale_image.delay(input_path=os.path.join(self.input, image.filename), output_path=os.path.join(self.output, image.filename))
+        task = upscale_image.delay(input_path=os.path.join(self.input, image.filename),
+                                   output_path=os.path.join(self.output, image.filename))
         # result = upscale(input_path=os.path.join(self.input, image.filename), output_path=os.path.join(self.output, image.filename))
         return jsonify({
             'task_id': task.id,
