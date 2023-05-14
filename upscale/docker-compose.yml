@@ -5,3 +5,7 @@ services:
     image: redis
     ports:
       - '6379:6379'
+    command: celery -A server.celery worker
+
+  upscale:
+    build: ./
