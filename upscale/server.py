@@ -8,18 +8,19 @@ from celery.result import AsyncResult
 import cv2
 from cv2 import dnn_superres
 from errors import HttpError
+from decouple import config
 
 
 root = pathlib.Path.cwd()
-if 'input' not in os.listdir(root):
-    os.mkdir('input')
-if 'pictures' not in os.listdir(root):
-    os.mkdir('pictures')
-if 'results' not in os.listdir(root):
-    os.mkdir('results')
+if config('INPUT_FOLDER') not in os.listdir(root):
+    os.mkdir(config('INPUT_FOLDER'))
+if config('TEST_FOLDER') not in os.listdir(root):
+    os.mkdir(config('TEST_FOLDER'))
+if config('OUTPUT_FOLDER') not in os.listdir(root):
+    os.mkdir(config('OUTPUT_FOLDER'))
 
 scaler = dnn_superres.DnnSuperResImpl_create()
-scaler.readModel('EDSR_x2.pb')
+scaler.readModel(config('UPSCALE_MODEL'))
 scaler.setModel("edsr", 2)
 
 app = Flask('app')
@@ -73,8 +74,8 @@ class UpscalerView(MethodView):
     #В инициализации объекта класса происходит проверка на наличие необходимых вспомогательных папок
     def __init__(self):
         self.root = pathlib.Path.cwd()
-        self.input = os.path.join(self.root, 'input')
-        self.output = os.path.join(self.root, 'results')
+        self.input = os.path.join(self.root, config('INPUT_FOLDER'))
+        self.output = os.path.join(self.root, config('OUTPUT_FOLDER'))
 
 
     def get(self, task_id):
@@ -96,7 +97,7 @@ class UpscalerView(MethodView):
         #Получает файл из request и сохраняет его на диск в папку 'input'
         image = request.files.get('file')
         if image == None:
-            raise HttpError(status_code=409, message='Вложение отсутсвует')
+            raise HttpError(status_code=409, message='File not found')
         try:
             image.save(os.path.join(self.input, image.filename))
         except AttributeError:

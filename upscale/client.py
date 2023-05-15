@@ -1,14 +1,14 @@
 import os
 import pathlib
 import time
-
+from decouple import config
 import requests
 
 
 root = pathlib.Path.cwd()
 
 def main():
-    # pictures = os.listdir(os.path.join(root, 'pictures'))
+    # pictures = os.listdir(os.path.join(root, config('TEST_FOLDER'))
     # list_tasks = []
     # files = []
     #
