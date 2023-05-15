@@ -1,4 +1,5 @@
 import os
+from os import getenv
 import pathlib
 from flask import Flask, request, jsonify, send_file
 from flask.views import MethodView
@@ -6,6 +7,8 @@ from celery import Celery
 from celery.result import AsyncResult
 import cv2
 from cv2 import dnn_superres
+from errors import HttpError
+
 
 root = pathlib.Path.cwd()
 if 'input' not in os.listdir(root):
@@ -14,6 +17,10 @@ if 'pictures' not in os.listdir(root):
     os.mkdir('pictures')
 if 'results' not in os.listdir(root):
     os.mkdir('results')
+
+scaler = dnn_superres.DnnSuperResImpl_create()
+scaler.readModel('EDSR_x2.pb')
+scaler.setModel("edsr", 2)
 
 app = Flask('app')
 app.config['UPLOAD_FOLDER'] = os.path.join(root, 'results')
@@ -30,12 +37,22 @@ class ContextTask(celery.Task):
 
 celery.Task = ContextTask
 
+@app.errorhandler(HttpError)
+def error_handler(error: AttributeError):
+    http_responce = jsonify({
+        'status': 'error',
+        'description': error.message
+    })
+    http_responce.status_code = error.status_code
+    return http_responce
+
 #Функция для быстрой проверки работы Flask
 @app.route('/')
 def hello_world():
     return 'Hello World'
+
 @celery.task()
-def upscale(input_path: str, output_path: str, model_path: str = 'EDSR_x2.pb'):
+def upscale(input_path: str, output_path: str):
     """
     :param input_path: путь к изображению для апскейла
     :param output_path:  путь к выходному файлу
@@ -43,9 +60,6 @@ def upscale(input_path: str, output_path: str, model_path: str = 'EDSR_x2.pb'):
     :return:
     """
 
-    scaler = dnn_superres.DnnSuperResImpl_create()
-    scaler.readModel(model_path)
-    scaler.setModel("edsr", 2)
     image = cv2.imread(input_path)
     result = scaler.upsample(image)
     cv2.imwrite(output_path, result)
@@ -62,6 +76,7 @@ class UpscalerView(MethodView):
         self.input = os.path.join(self.root, 'input')
         self.output = os.path.join(self.root, 'results')
 
+
     def get(self, task_id):
         task = AsyncResult(task_id, app=celery)
         if task.status == 'PENDING':
@@ -72,14 +87,23 @@ class UpscalerView(MethodView):
             return jsonify({
                 'result': get_link(file=task.result, host=request.host_url)
             })
+        if task.status == 'FAILURE':
+            raise HttpError(status_code=409, message={
+                'status': 'error',
+                'description': 'image processing error'
+            })
     def post(self):
         #Получает файл из request и сохраняет его на диск в папку 'input'
-        image = request.files['file']
-        image.save(os.path.join(self.input, image.filename))
-        print(request.host_url)
+        image = request.files.get('file')
+        if image == None:
+            raise HttpError(status_code=409, message='Вложение отсутсвует')
+        try:
+            image.save(os.path.join(self.input, image.filename))
+        except AttributeError:
+            raise HttpError(status_code=409)
         #Закидываем файл в upscaler, результат сохраняется в results
         task = upscale.delay(input_path=os.path.join(self.input, image.filename),
-                                   output_path=os.path.join(self.output, image.filename))
+                                           output_path=os.path.join(self.output, image.filename))
         return jsonify({
             'task_id': task.id,
             'tasl_status': task.status
@@ -92,4 +116,4 @@ app.add_url_rule('/upscale', view_func=UpscalerView.as_view('Upscaler'), methods
 app.add_url_rule('/tasks/<task_id>', view_func=UpscalerView.as_view('Task_View'), methods=['GET'])
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port='5000')
+    app.run()

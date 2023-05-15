@@ -19,5 +19,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY ./ /upscale
 
-RUN celery -A server.celery worker
 RUN python3 server.py
