@@ -32,7 +32,7 @@ app.config['UPLOAD_FOLDER'] = os.path.join(root, 'results')
 celery = Celery(
     'server',
     backend='redis://127.0.0.1:6379/1',
-    broker='redis://127:6379/2'
+    broker='redis://127.0.0.1:6379/2'
 )
 celery.conf.update(app.config)
 #Переопределение метода ContextTask
@@ -125,3 +125,6 @@ def get_result(file):
 
 app.add_url_rule('/upscale', view_func=UpscalerView.as_view('Upscaler'), methods=['POST'])
 app.add_url_rule('/tasks/<task_id>', view_func=UpscalerView.as_view('Task_View'), methods=['GET'])
+
+if __name__ == '__main__':
+    app.run()

@@ -9,26 +9,26 @@ services:
     image: redis
     ports:
       - '6379:6379'
-    networks:
-      - dev_network
+#    networks:
+#      - dev_network
   #Запуск основного приложения
-  app:
-    build:
-      context: .
-    ports:
-      - "5000:5000"
-    depends_on:
-      - redis
-    networks:
-      - dev_network
-  #Запуск Celery's worker
-  celery:
-    build:
-      context: .
-    entrypoint: celery -A server.celery worker
-    depends_on:
-      - redis
-    networks:
-      - dev_network
-    volumes:
-      - .:/upscale
+#  app:
+#    build:
+#      context: .
+#    ports:
+#      - "5000:5000"
+#    depends_on:
+#      - redis
+#    networks:
+#      - dev_network
+#  #Запуск Celery's worker
+#  celery:
+#    build:
+#      context: .
+#    entrypoint: celery -A server.celery worker
+#    depends_on:
+#      - redis
+#    networks:
+#      - dev_network
+#    volumes:
+#      - .:/upscale
