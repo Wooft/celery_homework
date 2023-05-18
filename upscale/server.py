@@ -31,8 +31,8 @@ app.config['UPLOAD_FOLDER'] = os.path.join(root, 'results')
 #Создание экземпляра класса Celery
 celery = Celery(
     'server',
-    backend='redis://redis:6379/1',
-    broker='redis://redis:6379/2'
+    backend='redis://127.0.0.1:6379/1',
+    broker='redis://127:6379/2'
 )
 celery.conf.update(app.config)
 #Переопределение метода ContextTask
